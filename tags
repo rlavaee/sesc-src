@@ -1,0 +1,50 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+DDR2	libmem/DDR2.cpp	/^DDR2::DDR2(const char *section, int _channelID)$/;"	f	class:DDR2
+DDR2Bank	libmem/DDR2.cpp	/^DDR2Bank::DDR2Bank()$/;"	f	class:DDR2Bank
+DDR2Rank	libmem/DDR2.cpp	/^DDR2Rank::DDR2Rank(const char *section)$/;"	f	class:DDR2Rank
+DRAMClock	libmem/DDR2.cpp	/^Time_t DRAMClock; $/;"	v
+MemRef	libmem/DDR2.cpp	/^MemRef::MemRef()$/;"	f	class:MemRef
+activate	libmem/DDR2.cpp	/^void DDR2::activate(int rankID, int bankID, int rowID)$/;"	f	class:DDR2
+activate	libmem/DDR2.cpp	/^void DDR2Bank::activate(int rowID)$/;"	f	class:DDR2Bank
+activate	libmem/DDR2.cpp	/^void DDR2Rank::activate(int bankID, int rowID)$/;"	f	class:DDR2Rank
+arrive	libmem/DDR2.cpp	/^void DDR2::arrive(MemRequest *mreq)$/;"	f	class:DDR2
+canIssueActivate	libmem/DDR2.cpp	/^bool DDR2::canIssueActivate(int rankID, int bankID)$/;"	f	class:DDR2
+canIssueActivate	libmem/DDR2.cpp	/^bool DDR2Rank::canIssueActivate(int bankID)$/;"	f	class:DDR2Rank
+canIssuePrecharge	libmem/DDR2.cpp	/^bool DDR2::canIssuePrecharge(int rankID, int bankID)$/;"	f	class:DDR2
+canIssuePrecharge	libmem/DDR2.cpp	/^bool DDR2Rank::canIssuePrecharge(int bankID)$/;"	f	class:DDR2Rank
+canIssueRead	libmem/DDR2.cpp	/^bool DDR2::canIssueRead(int rankID, int bankID, int rowID)$/;"	f	class:DDR2
+canIssueRead	libmem/DDR2.cpp	/^bool DDR2Rank::canIssueRead(int bankID, int rowID)$/;"	f	class:DDR2Rank
+canIssueRefresh	libmem/DDR2.cpp	/^bool DDR2::canIssueRefresh(int rankID, int bankID)$/;"	f	class:DDR2
+canIssueRefresh	libmem/DDR2.cpp	/^bool DDR2Rank::canIssueRefresh(int bankID)$/;"	f	class:DDR2Rank
+canIssueWrite	libmem/DDR2.cpp	/^bool DDR2::canIssueWrite(int rankID, int bankID, int rowID)$/;"	f	class:DDR2
+canIssueWrite	libmem/DDR2.cpp	/^bool DDR2Rank::canIssueWrite(int bankID, int rowID)$/;"	f	class:DDR2Rank
+clock	libmem/DDR2.cpp	/^void DDR2::clock()$/;"	f	class:DDR2
+complete	libmem/DDR2.cpp	/^void MemRef::complete(Time_t when)$/;"	f	class:MemRef
+enqueue	libmem/DDR2.cpp	/^void DDR2::enqueue(MemRequest *mreq)$/;"	f	class:DDR2
+getBackgroundEnergy	libmem/DDR2.cpp	/^long DDR2Rank::getBackgroundEnergy()$/;"	f	class:DDR2Rank
+getBankID	libmem/DDR2.cpp	/^int DDR2::getBankID(MemRequest *mreq)$/;"	f	class:DDR2
+getChannelID	libmem/DDR2.cpp	/^int DDR2::getChannelID(MemRequest *mreq)$/;"	f	class:DDR2
+neededRefreshes	libmem/DDR2.cpp	/^int DDR2::neededRefreshes(int rankID, int bankID)$/;"	f	class:DDR2
+neededRefreshes	libmem/DDR2.cpp	/^int DDR2Rank::neededRefreshes(int bankID)$/;"	f	class:DDR2Rank
+precharge	libmem/DDR2.cpp	/^void DDR2::precharge(int rankID, int bankID)$/;"	f	class:DDR2
+precharge	libmem/DDR2.cpp	/^void DDR2Bank::precharge()$/;"	f	class:DDR2Bank
+precharge	libmem/DDR2.cpp	/^void DDR2Rank::precharge(int bankID) $/;"	f	class:DDR2Rank
+read	libmem/DDR2.cpp	/^void DDR2::read(int rankID, int bankID, int rowID)$/;"	f	class:DDR2
+read	libmem/DDR2.cpp	/^void DDR2Bank::read()$/;"	f	class:DDR2Bank
+read	libmem/DDR2.cpp	/^void DDR2Rank::read(int bankID, int rowID)$/;"	f	class:DDR2Rank
+refresh	libmem/DDR2.cpp	/^void DDR2::refresh(int rankID, int bankID)$/;"	f	class:DDR2
+refresh	libmem/DDR2.cpp	/^void DDR2Bank::refresh()$/;"	f	class:DDR2Bank
+refresh	libmem/DDR2.cpp	/^void DDR2Rank::refresh(int bankID)$/;"	f	class:DDR2Rank
+scheduleDUERefresh	libmem/DDR2.cpp	/^void DDR2::scheduleDUERefresh()$/;"	f	class:DDR2
+scheduleFCFS	libmem/DDR2.cpp	/^void DDR2::scheduleFCFS()$/;"	f	class:DDR2
+scheduleFRFCFS	libmem/DDR2.cpp	/^void DDR2::scheduleFRFCFS()$/;"	f	class:DDR2
+updatePowerState	libmem/DDR2.cpp	/^void DDR2Rank::updatePowerState()$/;"	f	class:DDR2Rank
+updateQueueState	libmem/DDR2.cpp	/^void DDR2::updateQueueState()$/;"	f	class:DDR2
+write	libmem/DDR2.cpp	/^void DDR2::write(int rankID, int bankID, int rowID)$/;"	f	class:DDR2
+write	libmem/DDR2.cpp	/^void DDR2Bank::write()$/;"	f	class:DDR2Bank
+write	libmem/DDR2.cpp	/^void DDR2Rank::write(int bankID, int rowID)$/;"	f	class:DDR2Rank

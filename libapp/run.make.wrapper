@@ -1,0 +1,6 @@
+#!/bin/sh
+
+mipseb-linux-gcc -I. -c wrapper.c
+diff wrapper.o ../../../build.tls/obj/mipseb_obj/wrapper.o
+cp wrapper.o ../../../build.tls/obj/mipseb_obj/.
+mipseb-linux-objdump -D wrapper.o > wrapper.s
