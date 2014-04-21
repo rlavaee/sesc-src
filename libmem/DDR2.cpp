@@ -59,6 +59,7 @@ Time_t DRAMClock;
 MemRef::MemRef()
   : timeStamp(0), 
     servTimeStamp(0), 
+    servTimeStampSet(false), 
     mReq(NULL),
     rankID(-1),
     bankID(-1),
@@ -1104,7 +1105,12 @@ void DDR2::scheduleFRFCFS()
   }
 
   if(mRef != NULL){
-	if(mRef->getServTimeStamp()==0) mRef->setServTimeStamp(DRAMClock);//apareek
+	if(!mRef->servTimeStampSet) {
+	mRef->setServTimeStamp(DRAMClock);//apareek
+	mRef->servTimeStampSet=true;
+ //   std::cout << "service time start:\t"<<DRAMClock*multiplier<<"\n";
+//    std::cout << "wait time:\t"<<(DRAMClock-mRef->getTimeStamp())*multiplier<<"\n";
+	}
 	//printf("ServTime: %f : Oldest Time: %f\n",DRAMClock,oldestTime);
   }
   //If no CAS cmd was ready, find oldest ready precharge/activate
@@ -1143,8 +1149,12 @@ void DDR2::scheduleFRFCFS()
       }
     }
 	if(mRef != NULL){
-	//  mRef->setServTimeStamp(DRAMClock);//apareek
-	  if(mRef->getServTimeStamp()==0) mRef->setServTimeStamp(DRAMClock);//apareek
+	  if(!mRef->servTimeStampSet) {
+		mRef->setServTimeStamp(DRAMClock);//apareek
+//		std::cout << "wait time:\t"<<(DRAMClock-mRef->getTimeStamp())*multiplier<<"\n";
+		//std::cout << "service time start:\t"<<DRAMClock*multiplier<<"\n";
+		mRef->servTimeStampSet=true;
+	  }
 	}
   }
 
@@ -1203,6 +1213,8 @@ void DDR2::scheduleFRFCFS()
       // ~yanwei
 
       readServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
+	  mRef->servTimeStampSet=false;
+    //std::cout << "service time end:\t"<<globalClock + multiplier * (tCL + (BL/2) + 1) <<"\n";
 
       //This reference is now complete
       mRef->complete(globalClock + multiplier * (tCL + (BL/2) + 1));
@@ -1243,6 +1255,7 @@ void DDR2::scheduleFRFCFS()
       // ~yanwei
 
       writeServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
+	  mRef->servTimeStampSet=false;
 
 	  // rlavaee, push this completion time into wrCompQueue
 	  wrCompQueue.push(globalClock + multiplier * (tWL + (BL/2)+1));

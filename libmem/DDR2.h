@@ -112,6 +112,10 @@ class MemRef {
   
  public:
   
+
+
+  bool servTimeStampSet;
+
   //Get the arrival time of this reference
   Time_t getTimeStamp() { return timeStamp; }
   
