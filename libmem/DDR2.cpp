@@ -32,6 +32,7 @@
 #include <algorithm>
 
 
+GStatsAvg *OmidMemoryRAccessTime = new GStatsAvg("Interval_memory_RAccessTime"); //Omid
 //rlavaee, think time stat for writes
 GStatsAvg *wrThinkTime = new GStatsAvg("avg_write_think_time");
 GStatsAvg *wrPopulation=new GStatsAvg("avg_write_population");
@@ -1201,7 +1202,7 @@ void DDR2::scheduleFRFCFS()
       // yanwei, stats
       memoryRAccesTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
       // ~yanwei
-
+	OmidMemoryRAccessTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier); //Omid
       readServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
 
       //This reference is now complete
@@ -1319,6 +1320,9 @@ void DDR2::clock()
 			writeServRate->resetStat();
 			readServRate->resetStat();
 //apareek}
+
+			std::cout << "Interval Stats: " << IntervalCounter << " MemoryRAccessTime:" << OmidMemoryRAccessTime -> getDouble() << std::endl; //Omid
+			OmidMemoryRAccessTime -> resetStat(); //Omid
 			IntervalCounter++;
 		}
 		//~rlavaee
