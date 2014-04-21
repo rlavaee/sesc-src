@@ -39,6 +39,13 @@ const long long Interval = 10*1000*1000;
 long long IntervalCounter = 1;
 std::ofstream rlavaee_out("rlavaee.log");
 
+//apareek{
+GStatsAvg *readServRate = new GStatsAvg("avg_memory_read_service_time(%d)");  
+GStatsAvg *writeServRate = new GStatsAvg("avg_memory_write_service_time(%d)");  
+std::ofstream wrServTime("wrServTime.log");
+std::ofstream rdServTime("rdServTime.log");
+//apareek}
+
 //DRAM clock, scaled wrt globalClock
 Time_t DRAMClock; 
 
@@ -51,6 +58,7 @@ Time_t DRAMClock;
 //Memory reference constructor
 MemRef::MemRef()
   : timeStamp(0), 
+    servTimeStamp(0), 
     mReq(NULL),
     rankID(-1),
     bankID(-1),
@@ -1095,7 +1103,10 @@ void DDR2::scheduleFRFCFS()
     
   }
 
-
+  if(mRef != NULL){
+	mRef->setServTimeStamp(DRAMClock);//apareek
+	//printf("ServTime: %f : Oldest Time: %f\n",DRAMClock,oldestTime);
+  }
   //If no CAS cmd was ready, find oldest ready precharge/activate
   if(mRef == NULL){
 
@@ -1131,6 +1142,9 @@ void DDR2::scheduleFRFCFS()
 	
       }
     }
+	if(mRef != NULL){
+	  mRef->setServTimeStamp(DRAMClock);//apareek
+	}
   }
 
   //If an outstanding ready cmd exists in the queue
@@ -1187,6 +1201,7 @@ void DDR2::scheduleFRFCFS()
       memoryRAccesTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
       // ~yanwei
 
+      readServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
 
       //This reference is now complete
       mRef->complete(globalClock + multiplier * (tCL + (BL/2) + 1));
@@ -1225,6 +1240,8 @@ void DDR2::scheduleFRFCFS()
       // yanwei, stats
       memoryWAccesTime->sample(globalClock + multiplier * (tWL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
       // ~yanwei
+
+      writeServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
 
 	  // rlavaee, push this completion time into wrCompQueue
 	  wrCompQueue.push(globalClock + multiplier * (tWL + (BL/2)+1));
@@ -1287,8 +1304,20 @@ void DDR2::clock()
 		if(globalClock > Interval*IntervalCounter){
 			rlavaee_out << "i: "<< IntervalCounter<< "\taverage write think time: " << wrThinkTime->getDouble() << "\taverage write population: " << wrPopulation->getDouble() << std::endl;
 			rlavaee_out.flush();
+//apareek{
+			wrServTime << writeServRate->getDouble() <<" ";
+			wrServTime.flush();
+			printf("WrServTime: %f\n",writeServRate->getDouble());
+			rdServTime << readServRate->getDouble() <<" ";
+			rdServTime.flush();
+			printf("RdServTime: %f\n",writeServRate->getDouble());
+//apareek}
 			wrThinkTime->resetStat();
 			wrPopulation->resetStat();
+//apareek{
+			writeServRate->resetStat();
+			readServRate->resetStat();
+//apareek}
 			IntervalCounter++;
 		}
 		//~rlavaee

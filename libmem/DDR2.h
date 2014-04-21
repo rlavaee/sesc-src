@@ -67,6 +67,7 @@ class MemRef {
   //Arrival time of this reference to the DRAM queue
   Time_t timeStamp;
 
+  Time_t servTimeStamp;
   //MemRequest that made this reference
   MemRequest *mReq;
 
@@ -114,6 +115,7 @@ class MemRef {
   //Get the arrival time of this reference
   Time_t getTimeStamp() { return timeStamp; }
   
+  Time_t getServTimeStamp() { return servTimeStamp; }
   //Get the memory request that made this reference
   MemRequest *getMReq() { return mReq; };
   
@@ -158,6 +160,7 @@ class MemRef {
 
   //Set the timestamp for this memory reference
   void setTimeStamp(Time_t _timeStamp) { timeStamp = _timeStamp; }
+  void setServTimeStamp(Time_t _timeStamp) { servTimeStamp = _timeStamp; }
 
   //Set the memory request that made this reference
   void setMReq(MemRequest *_mReq) { mReq = _mReq; }
