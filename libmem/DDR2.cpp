@@ -1104,7 +1104,7 @@ void DDR2::scheduleFRFCFS()
   }
 
   if(mRef != NULL){
-	mRef->setServTimeStamp(DRAMClock);//apareek
+	if(mRef->getServTimeStamp()==0) mRef->setServTimeStamp(DRAMClock);//apareek
 	//printf("ServTime: %f : Oldest Time: %f\n",DRAMClock,oldestTime);
   }
   //If no CAS cmd was ready, find oldest ready precharge/activate
@@ -1143,7 +1143,8 @@ void DDR2::scheduleFRFCFS()
       }
     }
 	if(mRef != NULL){
-	  mRef->setServTimeStamp(DRAMClock);//apareek
+	//  mRef->setServTimeStamp(DRAMClock);//apareek
+	  if(mRef->getServTimeStamp()==0) mRef->setServTimeStamp(DRAMClock);//apareek
 	}
   }
 
