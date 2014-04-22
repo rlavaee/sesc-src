@@ -33,18 +33,23 @@
 
 
 GStatsAvg *OmidMemoryRAccessTime = new GStatsAvg("Interval_memory_RAccessTime"); //Omid
-//rlavaee, think time stat for writes
 GStatsAvg *wrThinkTime = new GStatsAvg("avg_write_think_time");
 GStatsAvg *wrPopulation=new GStatsAvg("avg_write_population");
 const long long Interval = 10*1000*1000;
 long long IntervalCounter = 1;
-std::ofstream rlavaee_out("rlavaee.log");
+//rlavaee{
+std::ofstream wrThinkTimeStream("wrThinkTime.log");
+std::ofstream wrJobCountStream("wrJobCount.log");
+std::ofstream rdThinkTimeStream("rdThinkTime.log");
+std::ofstream wrAccessTimeStream("wrAccessTime.log"); //not used
+std::ofstream rdAccessTimeStream("rdAccessTime.log");
+//rlavaee}
 
 //apareek{
 GStatsAvg *readServRate = new GStatsAvg("avg_memory_read_service_time(%d)");  
 GStatsAvg *writeServRate = new GStatsAvg("avg_memory_write_service_time(%d)");  
-std::ofstream wrServTime("wrServTime.log");
-std::ofstream rdServTime("rdServTime.log");
+std::ofstream wrServTimeStream("wrServTime.log");
+std::ofstream rdServTimeStream("rdServTime.log");
 //apareek}
 
 //DRAM clock, scaled wrt globalClock
@@ -1316,16 +1321,20 @@ void DDR2::clock()
 
 		//rlavaee, update stats
 		wrPopulation->sample(wrCompQueue.size());
+
+		//report the stats for interval
 		if(globalClock > Interval*IntervalCounter){
-			rlavaee_out << "i: "<< IntervalCounter<< "\taverage write think time: " << wrThinkTime->getDouble() << "\taverage write population: " << wrPopulation->getDouble() << std::endl;
-			rlavaee_out.flush();
+			wrThinkTimeStream << wrThinkTime->getDouble() << std::endl;
+			wrJobCountStream << wrPopulation->getDouble() << std::endl;
+			wrThinkTimeStream.flush();
+			wrJobCountStream.flush();
 //apareek{
-			wrServTime << writeServRate->getDouble() <<" ";
-			wrServTime.flush();
-			printf("WrServTime: %f\n",writeServRate->getDouble());
-			rdServTime << readServRate->getDouble() <<" ";
-			rdServTime.flush();
-			printf("RdServTime: %f\n",writeServRate->getDouble());
+			wrServTimeStream << writeServRate->getDouble() << std::endl;
+			wrServTimeStream.flush();
+			//printf("WrServTime: %f\n",writeServRate->getDouble());
+			rdServTimeStream << readServRate->getDouble() << std::endl;
+			rdServTimeStream.flush();
+			//printf("RdServTime: %f\n",writeServRate->getDouble());
 //apareek}
 			wrThinkTime->resetStat();
 			wrPopulation->resetStat();
@@ -1334,8 +1343,14 @@ void DDR2::clock()
 			readServRate->resetStat();
 //apareek}
 
-			std::cout << "Interval Stats: " << IntervalCounter << " MemoryRAccessTime:" << OmidMemoryRAccessTime -> getDouble() << std::endl; //Omid
+			rdAccessTimeStream << OmidMemoryRAccessTime->getDouble() << std::endl;
+			rdAccessTimeStream.flush();
+			rdThinkTimeStream << (32*Interval - OmidMemoryRAccessTime->getSamples() * OmidMemoryRAccessTime->getDouble())/OmidMemoryRAccessTime->getSamples() << std::endl;
+			rdThinkTimeStream.flush();
+			//std::cout << "Interval Stats: " << IntervalCounter << " MemoryRAccessTime:" << OmidMemoryRAccessTime -> getDouble() << std::endl; //Omid
 			OmidMemoryRAccessTime -> resetStat(); //Omid
+
+			// increment the interval counter
 			IntervalCounter++;
 		}
 		//~rlavaee
