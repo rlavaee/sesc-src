@@ -33,6 +33,8 @@
 
 #include "BloomFilter.h"
 
+#include <iostream>
+
 // This is an extremly fast MSHR implementation.  Given a number of
 // outstanding MSHR entries, it does a hash function to find a random
 // entry (always the same for a given address).

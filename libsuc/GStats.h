@@ -121,6 +121,9 @@ public:
 
   double getDouble() const;
   void reportValue() const;
+	void resetStat(){
+		data = 0;
+	}
 };
 
 class GStatsAvg : public GStats {
@@ -209,6 +212,15 @@ class GStatsMax : public GStats {
   }
 
   void reportValue() const;
+
+	long getValue() {
+		return maxValue;
+	}
+
+	void resetStat(){
+		nData=0;
+		maxValue = 0;
+	}
 };
 
 

@@ -33,7 +33,6 @@ Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #include "Port.h"
 #include "FastQueue.h"
   
-#include <queue> 
 #include <vector>
  
 #define FASTQUEUE_LIST
@@ -477,9 +476,6 @@ class DDR2 {
   std::vector<MemRef *> dramQ;
 
 
-  //rlavaee
-  std::queue<Time_t> wrCompQueue;
-  //~rlavaee
 
   //Arrival queue
   MemRequest *arrivalHead;
