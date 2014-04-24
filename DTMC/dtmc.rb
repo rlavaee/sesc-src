@@ -147,17 +147,19 @@ module DTMC
  
   
   (0..[RdJobCount,QueueSize].min ).each do |rds|
-    (0..[QueueSize-RdJobCount,WrJobCount].min).each do |wrs|
+    (0..[QueueSize-rds,WrJobCount].min).each do |wrs|
       (0..RdServTime).each { |res| State.add_node(rds,wrs,"read",res) if(rds>0) }
       (0..WrServTime).each { |res| State.add_node(rds,wrs,"write",res) if(wrs>0) }
     end
   end
 
+  #puts State.@@nodes
+
 
   State.add_all_edges
   #State.dump_all_edges
 
-  State.dump_all_matlab_code
+  #State.dump_all_matlab_code
  
   #dtmc = GraphViz.new(:G, :type => :digraph)
   #dtmc.add_edges(emptyQ,st_1_1_2,"weight" => "30")
