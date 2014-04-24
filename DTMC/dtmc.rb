@@ -127,7 +127,7 @@ module DTMC
     def State.dump_all_matlab_code
       puts "P = sparse(#{@@nodes.size},#{@@nodes.size},1)"
       @@nodes[0..@@nodes.size-2].each {|state| state.dump_matlab_code}
-      @@nodes.each_index {|i| puts "P(#{@@nodes.size},#{i})=1"}
+      @@nodes.each_index {|i| puts "P(#{@@nodes.size},#{i+1})=1"}
       puts "Y = sparse([zeros(#{@@nodes.size-1},1); 1])"
       puts "X = P\Y"
     end
