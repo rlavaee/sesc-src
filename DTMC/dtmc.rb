@@ -62,7 +62,7 @@ module DTMC
 
     def State.get_stored_node(state)
       if(!@@nodeIndices.include?(state))
-        puts "adding node #{state}"
+        #puts "adding node #{state}"
         @@nodeIndices[state]= @@nodes.size
         @@nodes << state
         return state
@@ -93,6 +93,14 @@ module DTMC
       return ((@residual==0) and (@readsInQ!=0 or @writesInQ!=0))
     end
 
+		def normalize_edges
+			fout = @out_edges.inject(0) { |result,oe| result+oe.rate}
+			@out_edges.each {|edge| edge.rate/=fout}
+		end
+
+		def State.normalize_all_edges
+			@@nodes.each {|state| state.normalize_edges}
+		end
 
     def add_edges
       if(needs_sched) #scheduling the next job in the queue
@@ -100,9 +108,11 @@ module DTMC
         if(@serving=="read")
           add_edge(State.new(@readsInQ-1,@writesInQ,"read",RdServTime),(@readsInQ-1).to_f/x) if(@readsInQ > 1)
           add_edge(State.new(@readsInQ-1,@writesInQ,"write",WrServTime),@writesInQ.to_f/x) if(@writesInQ > 0)
+					add_edge(State.new(0,0,"*",0),1) if(@readsInQ==1 and @writesInQ==0)
         elsif(@serving=="write")
           add_edge(State.new(@readsInQ,@writesInQ-1,"read",RdServTime),@readsInQ.to_f/x) if(@readsInQ > 0)
           add_edge(State.new(@readsInQ,@writesInQ-1,"write",WrServTime),(@writesInQ-1).to_f/x) if(@writesInQ > 1)
+					add_edge(State.new(0,0,"*",0),1) if(@readsInQ==0 and @writesInQ==1)
         elsif(@serving=="*")
           add_edge(State.new(@readsInQ,@writesInQ,"read",RdServTime),1) if(@readsInQ > 0)
           add_edge(State.new(@readsInQ,@writesInQ,"write",WrServTime),1) if(@writesInQ > 0)
@@ -126,9 +136,11 @@ module DTMC
     def dump_matlab_code
       #sum the flow out
       fout = @out_edges.inject(0) { |result,oe| result+oe.rate}
-      puts "P(#{@@nodeIndices[self]+1},#{@@nodeIndices[self]+1})=#{-fout}"
+			raise "For #{self}, flow out is not equal to one, it's #{fout}" if(fout!=1)
       @in_edges.each do |ie|
-        puts "P(#{@@nodeIndices[ie.to]+1},#{@@nodeIndices[ie.from]+1})=#{ie.rate}"
+				@@mi << @@nodeIndices[ie.to]+1
+				@@mj << @@nodeIndices[ie.from]+1
+				@@mv << ie.rate
       end
 
     end
@@ -142,11 +154,18 @@ module DTMC
     end
 
     def State.dump_all_matlab_code
-      puts "P = sparse(#{@@nodes.size},#{@@nodes.size},1)"
+			@@mi = Array.new
+			@@mj = Array.new
+			@@mv = Array.new
       @@nodes[0..@@nodes.size-2].each {|state| state.dump_matlab_code}
-      @@nodes.each_index {|i| puts "P(#{@@nodes.size},#{i+1})=1"}
-      puts "Y = sparse([zeros(#{@@nodes.size-1},1); 1])"
-      puts "X = P\\Y"
+      @@nodes.each_index {|i| @@mi << @@nodes.size; @@mj << i+1 ; @@mv << 1 }
+			puts "I = #{@@mi};"
+			puts "J = #{@@mj};"
+			puts "V = #{@@mv};"
+			puts "P = sparse(I,J,V,#{@@nodes.size},#{@@nodes.size});"
+			puts "P = P - speye(#{@@nodes.size});"
+      puts "Y = sparse([zeros(#{@@nodes.size-1},1); 1]);"
+      puts "X = P\\Y;"
     end
 
 
@@ -173,7 +192,8 @@ module DTMC
 
 
   State.add_all_edges
-  State.dump_all_edges
+	State.normalize_all_edges
+  #State.dump_all_edges
 
   State.dump_all_matlab_code
  
