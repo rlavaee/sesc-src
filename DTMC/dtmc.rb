@@ -57,9 +57,17 @@ module DTMC
 
     def State.add_node(rds,wrs,serving,res)
       state = State.new(rds,wrs,serving,res)
+      get_stored_node(state)
+    end
+
+    def State.get_stored_node(state)
       if(!@@nodeIndices.include?(state))
+        puts "adding node #{state}"
         @@nodeIndices[state]= @@nodes.size
         @@nodes << state
+        return state
+      else
+        return @@nodes[@@nodeIndices[state]]
       end
     end
 
@@ -74,16 +82,20 @@ module DTMC
     end
 
     def add_edge(to,rate)
-      storedTo = @@nodes[@@nodeIndices[to]]
+      storedTo = State.get_stored_node(to) 
       edge = Edge.new(self,storedTo,rate)
-      raise "self edge found: #{edge}" if(edge.is_self_edge?)
+      #raise "self edge found: #{edge}" if(edge.is_self_edge?)
       @out_edges << edge
       storedTo.in_edges << edge
     end
 
+    def needs_sched
+      return ((@residual==0) and (@readsInQ!=0 or @writesInQ!=0))
+    end
+
 
     def add_edges
-      if(@residual==0) #scheduling the next job in the queue
+      if(needs_sched) #scheduling the next job in the queue
         x = @readsInQ+@writesInQ-1
         if(@serving=="read")
           add_edge(State.new(@readsInQ-1,@writesInQ,"read",RdServTime),(@readsInQ-1).to_f/x) if(@readsInQ > 1)
@@ -91,17 +103,22 @@ module DTMC
         elsif(@serving=="write")
           add_edge(State.new(@readsInQ,@writesInQ-1,"read",RdServTime),@readsInQ.to_f/x) if(@readsInQ > 0)
           add_edge(State.new(@readsInQ,@writesInQ-1,"write",WrServTime),(@writesInQ-1).to_f/x) if(@writesInQ > 1)
+        elsif(@serving=="*")
+          add_edge(State.new(@readsInQ,@writesInQ,"read",RdServTime),1) if(@readsInQ > 0)
+          add_edge(State.new(@readsInQ,@writesInQ,"write",WrServTime),1) if(@writesInQ > 0)
         end
       else
         rdArrivalRate = (RdJobCount-@readsInQ).to_f/RdThinkTime
         wrArrivalRate = (WrJobCount-@writesInQ).to_f/WrThinkTime
         noArrivalRate = 1 - rdArrivalRate - wrArrivalRate
 
+        next_residual = (@serving=="*")?(@residual):(@residual-1)
+
         if(@readsInQ+@writesInQ < QueueSize)
-          add_edge(State.new(@readsInQ+1,@writesInQ,@serving,@residual-1), rdArrivalRate) if(@readsInQ < RdJobCount)
-          add_edge(State.new(@readsInQ,@writesInQ+1,@serving,@residual-1), wrArrivalRate) if(@writesInQ < WrJobCount)
+          add_edge(State.new(@readsInQ+1,@writesInQ,@serving,next_residual), rdArrivalRate) if(@readsInQ < RdJobCount)
+          add_edge(State.new(@readsInQ,@writesInQ+1,@serving,next_residual), wrArrivalRate) if(@writesInQ < WrJobCount)
         end
-        add_edge(State.new(@readsInQ,@writesInQ,@serving,@residual-1), noArrivalRate)
+        add_edge(State.new(@readsInQ,@writesInQ,@serving,next_residual), noArrivalRate) 
       end
 
     end
@@ -144,22 +161,21 @@ module DTMC
   
   end
 
- 
-  
-  (0..[RdJobCount,QueueSize].min ).each do |rds|
-    (0..[QueueSize-rds,WrJobCount].min).each do |wrs|
-      (0..RdServTime).each { |res| State.add_node(rds,wrs,"read",res) if(rds>0) }
-      (0..WrServTime).each { |res| State.add_node(rds,wrs,"write",res) if(wrs>0) }
-    end
-  end
-
-  #puts State.@@nodes
+  #the initial states
+  State.add_node(0,0,"*",0)
+   
+  #(0..[RdJobCount,QueueSize].min ).each do |rds|
+  #  (0..[QueueSize-rds,WrJobCount].min).each do |wrs|
+  #    (0..RdServTime).each { |res| State.add_node(rds,wrs,"read",res) if(rds>0) }
+  #    (0..WrServTime).each { |res| State.add_node(rds,wrs,"write",res) if(wrs>0) }  
+  #  end
+  #end
 
 
   State.add_all_edges
-  #State.dump_all_edges
+  State.dump_all_edges
 
-  #State.dump_all_matlab_code
+  State.dump_all_matlab_code
  
   #dtmc = GraphViz.new(:G, :type => :digraph)
   #dtmc.add_edges(emptyQ,st_1_1_2,"weight" => "30")
