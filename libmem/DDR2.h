@@ -233,8 +233,14 @@ class DDR2Bank {
   //Has a cas cmd hit the open row since activation ?
   bool casHit;
 
+  int thisBankID;//apareek
  public:
-  
+  GStatsCntr *rdBankCnt ;
+  GStatsCntr *wrBankCnt ;
+  std::ofstream *wrBankCountStream;
+  std::ofstream *rdBankCountStream;
+
+
   //Get bank state
   STATE getState() { return state; }
   
@@ -277,8 +283,9 @@ class DDR2Bank {
   //Write to open row
   void write();
 
+  void resetStats(); //apareek // resetting bank stats
   //Constructor
-  DDR2Bank();
+  DDR2Bank(int bankID); //adding bank id to constructor //apareek
 
   // Refresh
   Time_t timeRefresh;
@@ -354,7 +361,11 @@ class DDR2Rank {
   long eDQWRoth;
 
  public:
-  
+ 
+  //apareek{
+  void dumpBankStats();
+  //apareek}
+   
   //Get DDR2 background energy for current system state
   long getBackgroundEnergy();
 
