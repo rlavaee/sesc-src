@@ -37,31 +37,66 @@ analyze_interval <- function( params ){
 	SetDemand("dram","read",rdServTime)
 	SetDemand("dram","write",wrServTime)
 	Solve(EXACT)
-	res <- c(GetResponse(TERM,"read"),GetResponse(TERM,"write"),GetQueueLength("dram","read",TERM),GetQueueLength("dram","write",TERM))
+	res <- c(GetResponse(TERM,"read"),GetResponse(TERM,"write"),GetQueueLength("dram","read",TERM),GetQueueLength("dram","write",TERM),GetThruput(TERM,"read"),GetThruput(TERM,"write"),GetUtilization("dram","read",TERM),GetUtilization("dram","write",TERM))
 	return(res)
 }
 
 rdRespTimes <- vector("list",nrow(interval_data))
 wrRespTimes <- vector("list",nrow(interval_data))
-rdQOcc <- vector("list",nrow(interval_data))
-wrQOcc <- vector("list",nrow(interval_data))
+rdQOccs <- vector("list",nrow(interval_data))
+wrQOccs <- vector("list",nrow(interval_data))
+rdThrus <- vector("list",nrow(interval_data))
+wrThrus <- vector("list",nrow(interval_data))
+rdUtils <- vector("list",nrow(interval_data))
+wrUtils <- vector("list",nrow(interval_data))
 for (index in 1:nrow(interval_data)){
 	params <- interval_data[index,]
 	res <- analyze_interval(params)
 	rdRespTimes[[index]] <- res[1]
 	wrRespTimes[[index]] <- res[2]
-	rdQOcc[[index]] <- res[3]
-	wrQOcc[[index]] <- res[4]
+	rdQOccs[[index]] <- res[3]
+	wrQOccs[[index]] <- res[4]
+        rdThrus[[index]] <- res[5]
+        wrThrus[[index]] <- res[6]
+        rdUtils[[index]] <- res[7]
+        wrUtils[[index]] <- res[8]
 }
 rdRespTimes <- data.frame(unlist(rdRespTimes))
 wrRespTimes <- data.frame(unlist(wrRespTimes))
+rdQOccs <- data.frame(unlist(rdQOccs))
+wrQOccs <- data.frame(unlist(wrQOccs))
+rdThrus <- data.frame(unlist(rdThrus))
+wrThrus <- data.frame(unlist(wrThrus))
+rdUtils <- data.frame(unlist(rdUtils))
+wrUtils <- data.frame(unlist(wrUtils))
+
+
+
 rdRespTime <- colSums(rdRespTimes*rdNums) / colSums(rdNums)
 wrRespTime <- colSums(wrRespTimes*wrNums) / colSums(wrNums)
-rdQOcc <- apply(data.frame(unlist(rdQOcc)),2,mean)
-wrQOcc <- apply(data.frame(unlist(wrQOcc)),2,mean)
+rdQOcc <- apply(rdQOccs,2,mean)
+wrQOcc <- apply(wrQOccs,2,mean)
 QOcc <- rdQOcc + wrQOcc
+
+rdThru <- apply(rdThrus,2,mean)
+wrThru <- apply(wrThrus,2,mean)
+Thru <- rdThru + wrThru
+
+rdUtil <- apply(rdUtils,2,mean)
+wrUtil <- apply(wrUtils,2,mean)
+Util <- rdUtil + wrUtil
 
 wrRespTimesCmp <- data.frame(wrRespTimes,wrAccessTimes)
 rdRespTimesCmp <- data.frame(rdRespTimes,rdAccessTimes)
 show(rdRespTimesCmp)
 show(wrRespTimesCmp)
+show(rdThrus)
+show(wrThrus)
+show(rdUtils)
+show(wrUtils)
+show(rdThru)
+show(wrThru)
+show(rdUtil)
+show(wrUtil)
+
+
