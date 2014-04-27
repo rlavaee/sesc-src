@@ -110,7 +110,7 @@ module DTMC
 					if(nextServing=="*")
 							add_edge(State.new(1,0,"read",DTMC.rdServTime), rdArrivalRate*norm)
 							add_edge(State.new(0,1,"write",DTMC.wrServTime), wrArrivalRate*norm) 
-							add_edge(State.new(0,1,"*",0), noArrivalRate*norm) 
+							add_edge(State.new(0,0,"*",0), noArrivalRate*norm) 
 					else
 						if(@readsInQ+@writesInQ < DTMC.queueSize)
           		add_edge(State.new(nextReadsInQ+1,nextWritesInQ,nextServing,nextResidual), rdArrivalRate*norm) if(@readsInQ < DTMC.rdJobCount)
@@ -128,9 +128,11 @@ module DTMC
 				if(@serving=="read")
           add_arrival_edges(@readsInQ-1,@writesInQ,"read",DTMC.rdServTime,(@readsInQ-1).to_f/x) if(@readsInQ > 1)
           add_arrival_edges(@readsInQ-1,@writesInQ,"write",DTMC.wrServTime,@writesInQ.to_f/x) if(@writesInQ > 0)
+					add_arrival_edges(@readsInQ-1,@writesInQ,"*",0,1) if(@writesInQ ==0 and @readsInQ ==1)
         elsif(@serving=="write")
           add_arrival_edges(@readsInQ,@writesInQ-1,"read",DTMC.rdServTime,@readsInQ.to_f/x) if(@readsInQ > 0)
           add_arrival_edges(@readsInQ,@writesInQ-1,"write",DTMC.wrServTime,(@writesInQ-1).to_f/x) if(@writesInQ > 1)
+					add_arrival_edges(@readsInQ,@writesInQ-1,"*",0,1) if(@writesInQ ==1 and @readsInQ ==0)
 				end
 			else
 				add_arrival_edges(@readsInQ,@writesInQ,@serving,@residual-1,1)
@@ -296,6 +298,7 @@ f=File.open("radix.in","r") do |input_file|
   	DTMC.queueSize=inputs[7].to_i
 
 		DTMC.generate_chain
+		#DTMC.dump_edges
 		DTMC.dump_matlab_code
 		system `matlab -nodesktop -nosplash -r "run('dtmc#{DTMC.phase}.m')" > /dev/null`
 		DTMC.dump_perf_params
