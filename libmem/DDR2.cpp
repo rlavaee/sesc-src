@@ -26,6 +26,7 @@
 
 #include <limits>
 #include <cstdio>
+#include <sstream>
 
 #include <iostream>
 #include <fstream>
@@ -61,8 +62,8 @@ std::deque<Time_t> rdCompQ;
 //~rlavaee}
 
 //apareek{
-GStatsAvg *readServRate = new GStatsAvg("avg_memory_read_service_time(%d)");  
-GStatsAvg *writeServRate = new GStatsAvg("avg_memory_write_service_time(%d)");  
+GStatsAvg *readServRate = new GStatsAvg("avg_memory_read_service_time");  
+GStatsAvg *writeServRate = new GStatsAvg("avg_memory_write_service_time");  
 std::ofstream wrServTimeStream("wrServTime.log");
 std::ofstream rdServTimeStream("rdServTime.log");
 //apareek}
@@ -298,7 +299,7 @@ DDR2Rank::DDR2Rank(const char *section)
   // yanwei: not quite efficient
   banks = *(new std::vector<DDR2Bank *>(numBanks));
   for(int i=0; i<numBanks; i++){
-    banks[i] = new DDR2Bank();
+    banks[i] = new DDR2Bank(i); //apareek //setting bank IDs
   } 
 
   //Initialize Elastic Refresh
@@ -313,7 +314,7 @@ DDR2Rank::DDR2Rank(const char *section)
 }
 
 //Bank constructor
-DDR2Bank::DDR2Bank()
+DDR2Bank::DDR2Bank(int bankID)
   :state(IDLE),
    openRowID(-1),
    lastPrecharge(0),
@@ -325,8 +326,34 @@ DDR2Bank::DDR2Bank()
    lastRefresh(0)
 {
   //Nothing to do
+  rdBankCnt    = new GStatsCntr("bank_read_count(%d)", bankID);
+  wrBankCnt    = new GStatsCntr("bank_write_count(%d)", bankID);
+  thisBankID = bankID;
+  std::ostringstream bankNum;
+  bankNum << bankID;
+//  std::string bankNum = itoa(bankID);
+  std::string bankWrIo = "wrCntBank" + bankNum.str() + ".log";
+  std::string bankRdIo = "rdCntBank" + bankNum.str() + ".log";
+  wrBankCountStream = new std::ofstream(bankWrIo.c_str());
+  rdBankCountStream = new std::ofstream(bankRdIo.c_str());
+  //std::ofstream rdBankCountStream(bankRdIo.c_str());
 }
 
+//apareek{
+void DDR2Bank::resetStats()
+{
+
+  *wrBankCountStream <<  wrBankCnt->getDouble() << std::endl;
+  *rdBankCountStream <<  rdBankCnt->getDouble() << std::endl;
+  wrBankCountStream->flush();
+  rdBankCountStream->flush();
+  std::cout << "wr[" <<thisBankID << "] " << wrBankCnt->getDouble() << std::endl;
+  std::cout << "rd[" <<thisBankID << "] " << rdBankCnt->getDouble() << std::endl;
+
+  rdBankCnt -> resetStat();
+  wrBankCnt -> resetStat();
+}
+//apareek}
 //Precharge bank
 void DDR2Bank::precharge()
 {
@@ -349,6 +376,10 @@ void DDR2Bank::read()
 {
   lastRead = DRAMClock;
   casHit = true;
+//apareek{
+	  //logging stats for bank reads
+	  rdBankCnt->inc();
+//apareek}
 }
 
 //Write to open row
@@ -356,8 +387,17 @@ void DDR2Bank::write()
 {
   lastWrite = DRAMClock;
   casHit = true;
+//apareek{
+	  //logging stats for bank writes
+	  wrBankCnt->inc();
+//apareek}
 }
 
+void DDR2Rank::dumpBankStats(){//apareek
+  for(int i = 0;i< numBanks; i++){
+    banks[i]->resetStats();
+  }
+}
 //Can a precharge issue now to the given bank ?
 bool DDR2Rank::canIssuePrecharge(int bankID)
 {
@@ -1245,6 +1285,7 @@ void DDR2::scheduleFRFCFS()
       read(mRef->getRankID(), mRef->getBankID(), mRef->getRowID());
       mRef->setReadPending(false);
 
+
       // MemRequest *mreq = mRef->getMReq();
       // if (mreq->dma)
       // 	printf("DRAM read: %p returnaccess@%lld, transactionId: %d\n",
@@ -1290,7 +1331,8 @@ void DDR2::scheduleFRFCFS()
       //Issue write
       write(mRef->getRankID(), mRef->getBankID(), mRef->getRowID());
       mRef->setWritePending(false);
-      
+
+
 
       // MemRequest *mreq = mRef->getMReq();
       // if (mreq->dma)
@@ -1396,6 +1438,12 @@ void DDR2::clock()
 //apareek{
 			writeServRate->resetStat();
 			readServRate->resetStat();
+//apareek}
+//apareek{bank stats dump
+
+			for(int j = 0; j<numRanks;j++){
+				ranks[j]->dumpBankStats();
+			}
 //apareek}
 
 			rdAccessTimeStream << IntervalMemoryRAccessTime->getDouble() << std::endl;
