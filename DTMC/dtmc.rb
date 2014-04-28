@@ -88,37 +88,37 @@ module DTMC
       storedTo.in_edges << edge
     end
 
-		def is_init
-			return (@serving=="*")
-		end
+    def is_init
+      return (@serving=="*")
+    end
 
-		def normalize_edges
-			fout = @out_edges.inject(0) { |result,oe| result+oe.rate}
-			@out_edges.each {|edge| edge.rate/=fout}
-		end
+    def normalize_edges
+      fout = @out_edges.inject(0) { |result,oe| result+oe.rate}
+      @out_edges.each {|edge| edge.rate/=fout}
+    end
 
-		def State.normalize_all_edges
-			@@nodes.each {|state| state.normalize_edges}
-		end
+    def State.normalize_all_edges
+      @@nodes.each {|state| state.normalize_edges}
+    end
 
-		def add_arrival_edges(nextReadsInQ,nextWritesInQ,nextServing,nextResidual,norm)
-				rdArrivalRate = (DTMC.rdJobCount-@readsInQ).to_f/DTMC.rdThinkTime
-        wrArrivalRate = (DTMC.wrJobCount-@writesInQ).to_f/DTMC.wrThinkTime
-        noArrivalRate = 1 - rdArrivalRate - wrArrivalRate
+    def add_arrival_edges(nextReadsInQ,nextWritesInQ,nextServing,nextResidual,norm)
+      rdArrivalRate = (DTMC.rdJobCount-@readsInQ).to_f/DTMC.rdThinkTime
+      wrArrivalRate = (DTMC.wrJobCount-@writesInQ).to_f/DTMC.wrThinkTime
+      noArrivalRate = 1 - rdArrivalRate - wrArrivalRate
 
 
-					if(nextServing=="*")
-							add_edge(State.new(1,0,"read",DTMC.rdServTime), rdArrivalRate*norm)
-							add_edge(State.new(0,1,"write",DTMC.wrServTime), wrArrivalRate*norm) 
-							add_edge(State.new(0,0,"*",0), noArrivalRate*norm) 
-					else
-						if(@readsInQ+@writesInQ < DTMC.queueSize)
-          		add_edge(State.new(nextReadsInQ+1,nextWritesInQ,nextServing,nextResidual), rdArrivalRate*norm) if(@readsInQ < DTMC.rdJobCount)
-          		add_edge(State.new(nextReadsInQ,nextWritesInQ+1,nextServing,nextResidual), wrArrivalRate*norm) if(@writesInQ < DTMC.wrJobCount)
-        		end
-        		add_edge(State.new(nextReadsInQ,nextWritesInQ,nextServing,nextResidual), noArrivalRate*norm) 
-					end
-		end
+      if(nextServing=="*")
+        add_edge(State.new(1,0,"read",DTMC.rdServTime), rdArrivalRate*norm)
+        add_edge(State.new(0,1,"write",DTMC.wrServTime), wrArrivalRate*norm) 
+        add_edge(State.new(0,0,"*",0), noArrivalRate*norm) 
+      else
+        if(@readsInQ+@writesInQ < DTMC.queueSize)
+          add_edge(State.new(nextReadsInQ+1,nextWritesInQ,nextServing,nextResidual), rdArrivalRate*norm) if(@readsInQ < DTMC.rdJobCount)
+          add_edge(State.new(nextReadsInQ,nextWritesInQ+1,nextServing,nextResidual), wrArrivalRate*norm) if(@writesInQ < DTMC.wrJobCount)
+        end
+        add_edge(State.new(nextReadsInQ,nextWritesInQ,nextServing,nextResidual), noArrivalRate*norm) 
+      end
+    end
 
     def add_edges
       if(is_init)
@@ -171,7 +171,7 @@ module DTMC
       @@mv = Array.new
       @@nodes[0..@@nodes.size-2].each {|state| state.dump_matlab_code}
       @@nodes.each_index {|i| @@mi << @@nodes.size; @@mj << i+1 ; @@mv << 1 }
-      File.open("dtmc#{DTMC.phase}.m","w") do |mf|
+      File.open(File.join(DIR,"dtmc#{DTMC.phase}.m"),"w") do |mf|
         mf.puts "I = #{@@mi};"
         mf.puts "J = #{@@mj};"
         mf.puts "V = #{@@mv};"
@@ -267,7 +267,7 @@ module DTMC
   end
 
   def dump_perf_params
-    f = File.open("answer#{DTMC.phase}.txt","r") do |f|
+    f = File.open(File.join(DIR,"answer#{DTMC.phase}.txt"),"r") do |f|
       text = f.read
       eval(text.lines.first)
     end
@@ -282,7 +282,8 @@ end
 
 
 include DTMC
-f=File.open("radix.in","r") do |input_file|
+DIR = ARGV[0]
+f=File.open(File.join(DIR,"radix.in"),"r") do |input_file|
   input_file.each_line do |line|
     inputs = line.split(' ')
     DTMC.phase = inputs[0].to_i
@@ -295,13 +296,14 @@ f=File.open("radix.in","r") do |input_file|
     DTMC.rdThinkTime=inputs[5].to_f
     DTMC.wrThinkTime=inputs[6].to_f
 
-    DTMC.queueSize=inputs[7].to_i
+    #DTMC.queueSize=inputs[7].to_i
+    DTMC.queueSize = 64
 
-		DTMC.generate_chain
-		#DTMC.dump_edges
-		DTMC.dump_matlab_code
-		system `matlab -nodesktop -nosplash -r "run('dtmc#{DTMC.phase}.m')" > /dev/null`
-		DTMC.dump_perf_params
-	end
+    DTMC.generate_chain
+    #DTMC.dump_edges
+    DTMC.dump_matlab_code
+    system `matlab -nodesktop -nosplash -r "run('dtmc#{DTMC.phase}.m')" > /dev/null`
+    DTMC.dump_perf_params
+  end
 end
 
