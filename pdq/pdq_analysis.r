@@ -6,9 +6,9 @@ require('pdq')
 require('methods')
 
 rdJobCounts = read.table("rdJobCount.log",col.names=c("rdJobCount"))
-rdJobCounts = max(rdJobCounts,rep(1,nrow(rdJobCounts)))
+rdJobCounts = pmax(as.numeric(unlist(rdJobCounts)),rep(1,nrow(rdJobCounts)))
 wrJobCounts = read.table("wrJobCount.log",col.names=c("wrJobCount"))
-wrJobCounts = max(wrJobCounts,rep(1,nrow(wrJobCounts)))
+wrJobCounts = pmax(as.numeric(unlist(wrJobCounts)),rep(1,nrow(wrJobCounts)))
 rdServTimes = read.table("rdServTime.log",col.names=c("rdServTime"))
 wrServTimes = read.table("wrServTime.log",col.names=c("wrServTime"))
 
@@ -79,3 +79,5 @@ print(perf_params)
 
 rdRespTimesCmp=data.frame(rdRespTimes,rdAccessTimes)
 wrRespTimesCmp=data.frame(wrRespTimes,wrAccessTimes)
+
+print(interval_data)
