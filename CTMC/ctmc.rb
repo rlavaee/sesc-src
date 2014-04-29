@@ -248,7 +248,6 @@ module CTMC
               rdThru += Ans[i]*edge.rate if(edge.to.readsInQ > edge.from.readsInQ)
               wrThru += Ans[i]*edge.rate if(edge.to.writesInQ > edge.from.writesInQ)
             end
-          end
         end
         pf.write "#{rdThru}\t"
         pf.write "#{wrThru}\t"
@@ -258,7 +257,6 @@ module CTMC
         @@nodes.each_with_index do |state,i|
           rdUtil+=Ans[i] if(state.readsInQ!=0)
           wrUtil+=Ans[i] if(state.writeInQ!=0)
-
         end
         pf.write "#{rdUtil}\t"
         pf.write "#{wrUtil}\t"
