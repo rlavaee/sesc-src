@@ -3,6 +3,7 @@
 module CTMC
 
   class Bus
+		attr_accessor :ranges
     def initialize
       @ranges = Array.new
     end
@@ -47,7 +48,7 @@ module CTMC
     attr_accessor :wrThinkTime
     attr_accessor :queueSize
     attr_accessor :nbanks
-    attr_accessor :busContention
+    attr_accessor :burstLength
   end
 
 
@@ -141,7 +142,6 @@ module CTMC
           #puts "new sample"
           bank_nreads = {}
           bank_nwrites = {}
-          sum_service_time =0 
 
           @readsInQ.times.map {Random.rand(CTMC.nbanks)}.map do |bank|
             bank_nreads[bank] =(bank_nreads[bank].nil?)?1:(bank_nreads[bank]+1)
@@ -152,25 +152,30 @@ module CTMC
           #puts bank_nwrites
           #puts bank_nreads
           bus = Bus.new
-          bank_nreads.each do |bank,reads|
-            point = CTMC.rdServTime
-            reads.times do
-              bus.fill_first_empty_slot(point,CTMC.busContention)
-              sum_service_time += point+CTMC.busContention
-              point+=CTMC.busContention+CTMC.rdServTime
-            end
-            writes = bank_nwrites[bank]
-            if(!writes.nil?)
-              writes.times do
-                bus.fill_first_empty_slot(point,CTMC.busContention)
-                sum_service_time += point+CTMC.busContention
-                point+=CTMC.busContention+CTMC.wrServTime
+					(0..CTMC.nbanks-1).each do |bank|
+						point = 0
+						nreads = bank_nreads[bank]
+						if(!nreads.nil?)
+            	nreads.times do
+								point+=CTMC.rdServTime
+              	bus.fill_first_empty_slot(point,CTMC.burstLength)
+              	point+=CTMC.burstLength
+            	end
+						end
+            nwrites = bank_nwrites[bank]
+            if(!nwrites.nil?)
+              nwrites.times do
+								point+=CTMC.wrServTime
+                bus.fill_first_empty_slot(point,CTMC.burstLength)
+                point+=CTMC.burstLength+CTMC.wrServTime
               end
             end
 
           end
-          bank_nwrites      
-          service_rates << (@readsInQ+@writesInQ).to_f / sum_service_time
+					if(!bus.ranges.empty?)
+						max_service_time  = bus.ranges.last.last
+          	service_rates << (@readsInQ+@writesInQ).to_f / max_service_time
+					end
 
       end
       avg_service_rate = service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
@@ -194,6 +199,10 @@ module CTMC
     def dump_matlab_code
       #sum the flow out
       fout = @out_edges.inject(0) { |result,oe| result+oe.rate}
+			@@mi << @@nodeIndices[self]+1
+			@@mj << @@nodeIndices[self]+1
+			@@mv << -fout
+
       #raise "For #{self}, flow out is not equal to one, it's #{fout}" if(fout!=1)
       @in_edges.each do |ie|
         @@mi << @@nodeIndices[ie.to]+1
@@ -222,12 +231,12 @@ module CTMC
       @@mv = Array.new
       @@nodes[0..@@nodes.size-2].each {|state| state.dump_matlab_code}
       @@nodes.each_index {|i| @@mi << @@nodes.size; @@mj << i+1 ; @@mv << 1 }
-      File.open(File.join(DIR,"dtmc#{CTMC.phase}.m"),"w") do |mf|
+      File.open(File.join(DIR,"ctmc#{CTMC.phase}.m"),"w") do |mf|
         mf.puts "I = #{@@mi};"
         mf.puts "J = #{@@mj};"
         mf.puts "V = #{@@mv};"
         mf.puts "P = sparse(I,J,V,#{@@nodes.size},#{@@nodes.size});"
-        mf.puts "P = P - speye(#{@@nodes.size});"
+        #mf.puts "P = P - speye(#{@@nodes.size});"
         mf.puts "Y = sparse([zeros(#{@@nodes.size-1},1); 1]);"
         mf.puts "X = P\\Y;"
         mf.puts "fid = fopen('answer#{CTMC.phase}.txt','w');"
@@ -256,7 +265,7 @@ module CTMC
         wrUtil=0
         @@nodes.each_with_index do |state,i|
           rdUtil+=Ans[i] if(state.readsInQ!=0)
-          wrUtil+=Ans[i] if(state.writeInQ!=0)
+          wrUtil+=Ans[i] if(state.writesInQ!=0)
         end
         pf.write "#{rdUtil}\t"
         pf.write "#{wrUtil}\t"
@@ -328,19 +337,19 @@ end
 
 include CTMC
 DIR = ARGV[0]
-f=File.open(File.join(DIR,"radix.in.1"),"r") do |input_file|
+f=File.open(File.join(DIR,"radix.in"),"r") do |input_file|
   input_file.each_line do |line|
     inputs = line.split(' ')
     CTMC.phase = inputs[0].to_i
     CTMC.rdJobCount=inputs[1].to_f.round
     CTMC.wrJobCount=inputs[2].to_f.round
 
-    CTMC.rdServTime=inputs[3].to_f.round
-    CTMC.wrServTime=inputs[4].to_f.round
+    CTMC.rdServTime=inputs[3].to_f.round-4
+    CTMC.wrServTime=inputs[4].to_f.round-4
 
     CTMC.rdThinkTime=inputs[5].to_f
     CTMC.wrThinkTime=inputs[6].to_f
-    CTMC.busContention=12
+    CTMC.burstLength=4
     CTMC.nbanks=8
 
     #CTMC.queueSize=inputs[7].to_i
@@ -349,7 +358,7 @@ f=File.open(File.join(DIR,"radix.in.1"),"r") do |input_file|
     CTMC.generate_chain
     #CTMC.dump_edges
     CTMC.dump_matlab_code
-    system `matlab -nodesktop -nosplash -r "run('dtmc#{CTMC.phase}.m')" > /dev/null`
+    system `matlab -nodesktop -nosplash -r "run('#{File.join(DIR,"ctmc#{CTMC.phase}.m")}')" > /dev/null`
     CTMC.dump_perf_params
   end
 end
