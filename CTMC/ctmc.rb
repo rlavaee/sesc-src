@@ -11,7 +11,6 @@ module CTMC
     def fill_first_empty_slot(point,length)
       #puts "adding interval (#{point}..#{point+length})"
       #puts @ranges.inspect
-      found = false
       from = 0
       @ranges.each_with_index  do |range,i|
         to = range.first
@@ -29,12 +28,13 @@ module CTMC
           next
         end
        
-        found = true
         @ranges.insert(i,(point..point+length))
-        break
+				return point+length
 
       end
-      @ranges << ([point,from].max..[point,from].max+length) if(!found)
+      @ranges << ([point,from].max..[point,from].max+length)
+			return [point,from].max+length
+
     end
   end
 
@@ -49,6 +49,8 @@ module CTMC
     attr_accessor :queueSize
     attr_accessor :nbanks
     attr_accessor :burstLength
+		attr_accessor :rdCntBank
+		attr_accessor :wrCntBank
   end
 
 
@@ -135,52 +137,57 @@ module CTMC
 
     def add_service_edges
       #puts "adding service edges for #{self}"
-      x= @readsInQ+@writesInQ
-      service_rates = []
+      read_service_rates = []
+      write_service_rates = []
       nsamples = 30
-      nsamples.times.inject do |sample|
+      nsamples.times.each do |sample|
           #puts "new sample"
-          bank_nreads = {}
-          bank_nwrites = {}
+          bank_nreads = Array.new(CTMC.nbanks,0)
+          bank_nwrites = Array.new(CTMC.nbanks,0)
 
-          @readsInQ.times.map {Random.rand(CTMC.nbanks)}.map do |bank|
-            bank_nreads[bank] =(bank_nreads[bank].nil?)?1:(bank_nreads[bank]+1)
+          @readsInQ.times.map {Random.rand(CTMC.rdCntBank[CTMC.nbanks-1])}.map do |rand|
+						CTMC.rdCntBank.each_with_index do |value,bank|
+            	bank_nreads[bank] +=1 if(rand<value)
+						end
           end
-          @writesInQ.times.map {Random.rand(CTMC.nbanks)}.map do |bank|
-            bank_nwrites[bank] =(bank_nwrites[bank].nil?)?1:(bank_nwrites[bank]+1)
+          @writesInQ.times.map {Random.rand(CTMC.wrCntBank[CTMC.nbanks-1])}.map do |rand|
+						CTMC.wrCntBank.each_with_index do |value,bank|
+            	bank_nwrites[bank] +=1 if(rand<value)
+						end
           end
           #puts bank_nwrites
           #puts bank_nreads
           bus = Bus.new
+					last_read = 0
+					last_write = 0
 					(0..CTMC.nbanks-1).each do |bank|
 						point = 0
 						nreads = bank_nreads[bank]
-						if(!nreads.nil?)
-            	nreads.times do
-								point+=CTMC.rdServTime
-              	bus.fill_first_empty_slot(point,CTMC.burstLength)
-              	point+=CTMC.burstLength
-            	end
-						end
             nwrites = bank_nwrites[bank]
-            if(!nwrites.nil?)
-              nwrites.times do
+						while(nreads+nwrites!=0) do
+							rand = Random.rand(nreads+nwrites)
+							if(rand<nreads)
+								point+=CTMC.rdServTime
+              	point=bus.fill_first_empty_slot(point,CTMC.burstLength)
+								last_read = [last_read,point].max
+								nreads-=1
+							else
 								point+=CTMC.wrServTime
-                bus.fill_first_empty_slot(point,CTMC.burstLength)
-                point+=CTMC.burstLength+CTMC.wrServTime
+                point = bus.fill_first_empty_slot(point,CTMC.burstLength)
+								last_write = [last_write,point].max
+								nwrites-=1
               end
             end
 
           end
-					if(!bus.ranges.empty?)
-						max_service_time  = bus.ranges.last.last
-          	service_rates << (@readsInQ+@writesInQ).to_f / max_service_time
+          read_service_rates << @readsInQ.to_f / last_read if(last_read!=0)
+          write_service_rates << @writesInQ.to_f / last_write if(last_write!=0)
 					end
 
-      end
-      avg_service_rate = service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
-      add_edge(State.new(@readsInQ-1,@writesInQ),avg_service_rate*@readsInQ.to_f/x) if(@readsInQ > 0)
-      add_edge(State.new(@readsInQ,@writesInQ-1),avg_service_rate*@writesInQ.to_f/x) if(@writesInQ > 0)
+      avg_read_service_rate = read_service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
+      avg_write_service_rate = write_service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
+      add_edge(State.new(@readsInQ-1,@writesInQ),avg_read_service_rate) if(@readsInQ > 0)
+      add_edge(State.new(@readsInQ,@writesInQ-1),avg_write_service_rate) if(@writesInQ > 0)
 
     end
 
@@ -248,7 +255,7 @@ module CTMC
     end
 
     def State.dump_perf_params
-      File.open("perf.out","a") do |pf|
+      File.open(File.join(DIR,"perf.csv"),"a") do |pf|
         pf.write "#{CTMC.phase}\t"
         rdThru=0
         wrThru=0
@@ -337,20 +344,37 @@ end
 
 include CTMC
 DIR = ARGV[0]
-f=File.open(File.join(DIR,"radix.csv"),"r") do |input_file|
+f=File.open(File.join(DIR,"radix.csv.1"),"r") do |input_file|
   input_file.each_line do |line|
     inputs = line.split(' ')
     CTMC.phase = inputs[0].to_i
-    CTMC.rdJobCount=inputs[1].to_f.round
-    CTMC.wrJobCount=inputs[2].to_f.round
+    CTMC.burstLength=4
+    CTMC.rdJobCount=[inputs[1].to_f.round,1].max
+    CTMC.wrJobCount=[inputs[2].to_f.round,1].max
 
-    CTMC.rdServTime=inputs[3].to_f.round-4
-    CTMC.wrServTime=inputs[4].to_f.round-4
+    CTMC.rdServTime=inputs[3].to_f.round-CTMC.burstLength
+    CTMC.wrServTime=inputs[4].to_f.round-CTMC.burstLength
 
     CTMC.rdThinkTime=inputs[5].to_f
     CTMC.wrThinkTime=inputs[6].to_f
-    CTMC.burstLength=4
+
     CTMC.nbanks=8
+
+		CTMC.rdCntBank = []
+		CTMC.wrCntBank = []
+		(0..CTMC.nbanks-1).each do |bank|
+			CTMC.rdCntBank << inputs[7+bank].to_i
+		end
+		
+		(0..CTMC.nbanks-1).each do |bank|
+			CTMC.wrCntBank << inputs[7+CTMC.nbanks+bank].to_i
+		end
+
+		CTMC.rdCntBank.each_with_index.inject(0) {|sum,(value,index)| sum+=value; CTMC.rdCntBank[index]=sum}
+		CTMC.wrCntBank.each_with_index.inject(0) {|sum,(value,index)| sum+=value; CTMC.wrCntBank[index]=sum}
+		CTMC.rdCntBank[CTMC.nbanks-1]+=1 if(CTMC.rdCntBank[CTMC.nbanks-1]==0)
+		CTMC.wrCntBank[CTMC.nbanks-1]+=1 if(CTMC.wrCntBank[CTMC.nbanks-1]==0)
+			
 
     #CTMC.queueSize=inputs[7].to_i
     CTMC.queueSize = 64
