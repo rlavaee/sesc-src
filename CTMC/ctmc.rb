@@ -337,7 +337,7 @@ end
 
 include CTMC
 DIR = ARGV[0]
-f=File.open(File.join(DIR,"radix.in"),"r") do |input_file|
+f=File.open(File.join(DIR,"radix.csv"),"r") do |input_file|
   input_file.each_line do |line|
     inputs = line.split(' ')
     CTMC.phase = inputs[0].to_i
