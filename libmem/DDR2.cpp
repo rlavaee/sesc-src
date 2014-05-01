@@ -347,8 +347,8 @@ void DDR2Bank::resetStats()
   *rdBankCountStream <<  rdBankCnt->getDouble() << std::endl;
   wrBankCountStream->flush();
   rdBankCountStream->flush();
-  std::cout << "wr[" <<thisBankID << "] " << wrBankCnt->getDouble() << std::endl;
-  std::cout << "rd[" <<thisBankID << "] " << rdBankCnt->getDouble() << std::endl;
+  //std::cout << "wr[" <<thisBankID << "] " << wrBankCnt->getDouble() << std::endl;
+  //std::cout << "rd[" <<thisBankID << "] " << rdBankCnt->getDouble() << std::endl;
 
   rdBankCnt -> resetStat();
   wrBankCnt -> resetStat();
@@ -1303,6 +1303,7 @@ void DDR2::scheduleFRFCFS()
 	IntervalMemoryRAccessTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier); //Omid
 			IntervalNReads->inc();
       readServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
+			std::cout << "one read from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
     //std::cout << "service time end:\t"<<globalClock + multiplier * (tCL + (BL/2) + 1) <<"\n";
 
@@ -1352,6 +1353,7 @@ void DDR2::scheduleFRFCFS()
 			//rlavaee}
 
       writeServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
+			std::cout << "one write from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
 
 	  // rlavaee, push this completion time into wrCompQ
