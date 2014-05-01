@@ -147,16 +147,23 @@ module CTMC
 
           @readsInQ.times.map {Random.rand(CTMC.rdCntBank[CTMC.nbanks-1])}.map do |rand|
 						CTMC.rdCntBank.each_with_index do |value,bank|
-            	bank_nreads[bank] +=1 if(rand<value)
+							if(rand < value)
+            		bank_nreads[bank] +=1 
+								break
+							end
 						end
           end
           @writesInQ.times.map {Random.rand(CTMC.wrCntBank[CTMC.nbanks-1])}.map do |rand|
 						CTMC.wrCntBank.each_with_index do |value,bank|
-            	bank_nwrites[bank] +=1 if(rand<value)
+							if(rand < value)
+            		bank_nwrites[bank] +=1 
+								break
+							end
 						end
           end
-          #puts bank_nwrites
-          #puts bank_nreads
+
+          puts bank_nwrites.inspect
+          puts bank_nreads.inspect
           bus = Bus.new
 					last_read = 0
 					last_write = 0
@@ -180,12 +187,13 @@ module CTMC
             end
 
           end
+					last_access = [last_read,last_write].max
           read_service_rates << @readsInQ.to_f / last_read if(last_read!=0)
           write_service_rates << @writesInQ.to_f / last_write if(last_write!=0)
 					end
 
-      avg_read_service_rate = read_service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
-      avg_write_service_rate = write_service_rates.inject{ |sum, el| sum + el }.to_f / nsamples
+      avg_read_service_rate = read_service_rates.inject(0) { |sum, el| sum + el }.to_f / nsamples
+      avg_write_service_rate = write_service_rates.inject(0) { |sum, el| sum + el }.to_f / nsamples
       add_edge(State.new(@readsInQ-1,@writesInQ),avg_read_service_rate) if(@readsInQ > 0)
       add_edge(State.new(@readsInQ,@writesInQ-1),avg_write_service_rate) if(@writesInQ > 0)
 
@@ -196,7 +204,7 @@ module CTMC
 
           rdArrivalRate = (CTMC.rdJobCount-@readsInQ).to_f/CTMC.rdThinkTime
           wrArrivalRate = (CTMC.wrJobCount-@writesInQ).to_f/CTMC.wrThinkTime
-          if(@readsInQ+@writesInQ+1 < CTMC.queueSize)
+          if(@readsInQ+@writesInQ < CTMC.queueSize)
             add_edge(State.new(@readsInQ+1,@writesInQ),rdArrivalRate) if (@readsInQ < CTMC.rdJobCount)
             add_edge(State.new(@readsInQ,@writesInQ+1),wrArrivalRate) if (@writesInQ < CTMC.wrJobCount)
           end
@@ -271,8 +279,8 @@ module CTMC
         rdUtil=0
         wrUtil=0
         @@nodes.each_with_index do |state,i|
-          rdUtil+=Ans[i] if(state.readsInQ!=0)
-          wrUtil+=Ans[i] if(state.writesInQ!=0)
+          rdUtil+=Ans[i]*[state.readsInQ.to_f/CTMC.nbanks,1].min 
+          wrUtil+=Ans[i]*[state.writesInQ.to_f/CTMC.nbanks,1].min
         end
         pf.write "#{rdUtil}\t"
         pf.write "#{wrUtil}\t"
@@ -344,7 +352,7 @@ end
 
 include CTMC
 DIR = ARGV[0]
-f=File.open(File.join(DIR,"radix.csv.1"),"r") do |input_file|
+f=File.open(File.join(DIR,"radix.csv"),"r") do |input_file|
   input_file.each_line do |line|
     inputs = line.split(' ')
     CTMC.phase = inputs[0].to_i
@@ -372,6 +380,9 @@ f=File.open(File.join(DIR,"radix.csv.1"),"r") do |input_file|
 
 		CTMC.rdCntBank.each_with_index.inject(0) {|sum,(value,index)| sum+=value; CTMC.rdCntBank[index]=sum}
 		CTMC.wrCntBank.each_with_index.inject(0) {|sum,(value,index)| sum+=value; CTMC.wrCntBank[index]=sum}
+
+		puts CTMC.rdCntBank.inspect
+		puts CTMC.wrCntBank.inspect
 		CTMC.rdCntBank[CTMC.nbanks-1]+=1 if(CTMC.rdCntBank[CTMC.nbanks-1]==0)
 		CTMC.wrCntBank[CTMC.nbanks-1]+=1 if(CTMC.wrCntBank[CTMC.nbanks-1]==0)
 			
