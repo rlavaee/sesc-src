@@ -403,7 +403,8 @@ bool DDR2Rank::canIssuePrecharge(int bankID)
 {
 
   //Enforce tWR
-  if(DRAMClock - (banks[bankID]->getLastWrite() + tWL + (BL/2)) < tWR){
+  //if(DRAMClock - (banks[bankID]->getLastWrite() + tWL + (BL/2)) < tWR){ //fixed rlavaee
+	if(DRAMClock - banks[bankID]->getLastWrite() < tWR+tWL+(BL/2)){
     return false;
   }
   
@@ -470,7 +471,8 @@ bool DDR2Rank::canIssueRead(int bankID, int rowID)
   }
   
   //Enforce tWTR
-  if(DRAMClock - (lastWrite + tWL + (BL/2)) < tWTR){
+  //if(DRAMClock - (lastWrite + tWL + (BL/2)) < tWTR){ rlavaee fixed
+	if(DRAMClock - lastWrite < tWTR + tWL + (BL/2)){
     return false;
   }
   
@@ -944,11 +946,13 @@ bool DDR2::canIssueRead(int rankID, int bankID, int rowID)
     //Go through all other ranks
     if(i!=rankID){
       //Consecutive reads
-      if(DRAMClock - (ranks[i]->getLastRead() + (BL/2)) < tRTRS){  	
+      //if(DRAMClock - (ranks[i]->getLastRead() + (BL/2)) < tRTRS){  	 rlavaee fixed
+			if(DRAMClock - ranks[i]->getLastRead() < tRTRS + (BL/2)){
 	return false;
       }  
       //Write followed by read
-      if(DRAMClock - (ranks[i]->getLastWrite() + tWL + (BL/2) - tCL) < tRTRS){
+      //if(DRAMClock - (ranks[i]->getLastWrite() + tWL + (BL/2) - tCL) < tRTRS){ rlavaee fixed
+			if(DRAMClock - (ranks[i]->getLastWrite() + - tCL) < tRTRS + tWL + (BL/2)){
 	return false;
       }  
     }
@@ -969,13 +973,16 @@ bool DDR2::canIssueWrite(int rankID, int bankID, int rowID)
   //Enforce tRTRS
   for(int i=0; i<numRanks; i++){
     //Read followed by write, any two ranks
-    if(DRAMClock - (lastRead + tCL + (BL/2) - tWL) < tRTRS){
+    //if(DRAMClock - (lastRead + tCL + (BL/2) - tWL) < tRTRS){ rlavaee fixed
+		 if(DRAMClock - (lastRead - tWL) < tRTRS + tCL + BL/2){
       return false;
     }
     //Write followed by write, different ranks
     if(i!=rankID){
       //Enforce tOST
-      if(DRAMClock - (lastWrite + (BL/2)) < tOST){
+      //if(DRAMClock - (lastWrite + (BL/2)) < tOST){ rlavaee fixed
+			if(DRAMClock - lastWrite < tOST + BL/2){
+
 	return false;
       }
     }
