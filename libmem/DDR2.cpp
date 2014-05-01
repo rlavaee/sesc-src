@@ -1300,22 +1300,25 @@ void DDR2::scheduleFRFCFS()
       // else
       // 	printf("DRAM read: %p returnaccess@%lld\n",
       // 	       (void *) mreq->getPAddr(), (long long) globalClock);
+			//
+			// rlavaee: better to reuse completion time
+			Time_t comp_time = globalClock + multiplier * (tCL + (BL/2)+1);
 
 			//rlavaee{
-		rdCompQ.push_back(globalClock + multiplier * (tWL + (BL/2)+1));
+		rdCompQ.push_back(comp_time);
 			//rlavaee}
       // yanwei, stats
-      memoryRAccesTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
+      memoryRAccesTime->sample(comp_time - mRef->getTimeStamp()*multiplier);
       // ~yanwei
-	IntervalMemoryRAccessTime->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier); //Omid
+	IntervalMemoryRAccessTime->sample(comp_time - mRef->getTimeStamp()*multiplier); //Omid
 			IntervalNReads->inc();
-      readServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
-			std::cout << "one read from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier << std::endl;
+      readServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
+			std::cout << "one read from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
     //std::cout << "service time end:\t"<<globalClock + multiplier * (tCL + (BL/2) + 1) <<"\n";
 
       //This reference is now complete
-      mRef->complete(globalClock + multiplier * (tCL + (BL/2) + 1));
+      mRef->complete(comp_time);
 #ifndef FASTQUEUE_LIST
       freeList->push_back(index);
 #else
@@ -1351,25 +1354,27 @@ void DDR2::scheduleFRFCFS()
       // 	       (void *) mreq->getPAddr(), (long long) globalClock);
 
       // yanwei, stats
-      memoryWAccesTime->sample(globalClock + multiplier * (tWL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
+			//rlavaee: better to reuse completion time
+			Time_t comp_time = globalClock+multiplier *(tWL + (BL/2) + 1);
+      memoryWAccesTime->sample(comp_time - mRef->getTimeStamp()*multiplier);
       // ~yanwei
       
 			// rlavaee{
-			IntervalMemoryWAccessTime->sample(globalClock + multiplier * (tWL + (BL/2) + 1) - mRef->getTimeStamp()*multiplier);
+			IntervalMemoryWAccessTime->sample(comp_time - mRef->getTimeStamp()*multiplier);
 			IntervalNWrites->inc();
 			//rlavaee}
 
-      writeServRate->sample(globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier);//apareek
-			std::cout << "one write from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< globalClock + multiplier * (tCL + (BL/2) + 1) - mRef->getServTimeStamp()*multiplier << std::endl;
+      writeServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
+			std::cout << "one write from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
 
 	  // rlavaee, push this completion time into wrCompQ
-	  wrCompQ.push_back(globalClock + multiplier * (tWL + (BL/2)+1));
+	  wrCompQ.push_back(comp_time);
 	  // ~rlavaee
 
 
       // This reference is now complete
-      mRef->complete(globalClock + multiplier * (tWL + (BL/2) + 1));
+      mRef->complete(comp_time);
 #ifndef FASTQUEUE_LIST
       freeList->push_back(index);
 #else
