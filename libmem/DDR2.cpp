@@ -37,18 +37,16 @@ GStatsAvg *IntervalMemoryRAccessTime = new GStatsAvg("Interval_memory_RAccessTim
 GStatsAvg *IntervalMemoryWAccessTime = new GStatsAvg("Interval_memory_RAccessTime"); //Omid
 GStatsCntr *IntervalNReads = new GStatsCntr("interval_number_of_reads");
 GStatsCntr *IntervalNWrites = new GStatsCntr("interval_number_of_writes");
-GStatsAvg *wrThinkTime = new GStatsAvg("avg_write_think_time");
 GStatsAvg *wrPopulation=new GStatsAvg("write_population");
 const long long Interval = 10*1000*1000;
 long long IntervalCounter = 1;
 //rlavaee{
-GStatsAvg *rdThinkTime = new GStatsAvg("avg_read_think_time");
 GStatsAvg *rdPopulation=new GStatsAvg("read_population");
 std::ofstream wrThinkTimeStream("wrThinkTime.log");
 std::ofstream wrJobCountStream("wrJobCount.log");
 std::ofstream rdJobCountStream("rdJobCount.log");
 std::ofstream rdThinkTimeStream("rdThinkTime.log");
-std::ofstream wrAccessTimeStream("wrAccessTime.log"); //not used
+std::ofstream wrAccessTimeStream("wrAccessTime.log");
 std::ofstream rdAccessTimeStream("rdAccessTime.log");
 std::ofstream wrNumStream("wrNum.log");
 std::ofstream rdNumStream("rdNum.log");
@@ -811,6 +809,7 @@ void DDR2::enqueue(MemRequest *mreq)
   //Set the bank ID
   int bankID = (mreq->getPAddr() >> (pageSizeLog2 + numChannelsLog2 + numRanksLog2)) & (numBanks - 1);
   dramQ[index]->setBankID(bankID);
+	//std::cout << (mreq->getPAddr() >> pageSizeLog2) << std::endl;
 
   //Set the row ID
   int rowID = mreq->getPAddr() >> (pageSizeLog2 + numChannelsLog2 + numRanksLog2 + numBanksLog2);
@@ -861,7 +860,7 @@ void DDR2::enqueue(MemRequest *mreq)
 		
 		for(std::deque<Time_t>::iterator it=wrCompQ.begin(); it!=wrCompQ.end(); ++it){
 			if(DRAMClock*multiplier > *it){
-  			wrThinkTime->sample(DRAMClock*multiplier - *it);
+  			//wrThinkTime->sample(DRAMClock*multiplier - *it);
 				wrPopulation->sample(wrCompQ.size()+wrOccupancy);
 				wrCompQ.erase(it);
 				break;
@@ -872,7 +871,7 @@ void DDR2::enqueue(MemRequest *mreq)
 	if(!rdCompQ.empty() && dramQ[index]->isRead()){
 		for(std::deque<Time_t>::iterator it=rdCompQ.begin(); it!=rdCompQ.end(); ++it){
 			if(DRAMClock*multiplier > *it){
-  			rdThinkTime->sample(DRAMClock*multiplier - *it);
+  			//rdThinkTime->sample(DRAMClock*multiplier - *it);
 				rdPopulation->sample(rdCompQ.size()+rdOccupancy);
 				rdCompQ.erase(it);
 				break;
@@ -1313,7 +1312,7 @@ void DDR2::scheduleFRFCFS()
 	IntervalMemoryRAccessTime->sample(comp_time - mRef->getTimeStamp()*multiplier); //Omid
 			IntervalNReads->inc();
       readServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
-			std::cout << "one read from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
+			//std::cout << "one read from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
     //std::cout << "service time end:\t"<<globalClock + multiplier * (tCL + (BL/2) + 1) <<"\n";
 
@@ -1365,7 +1364,7 @@ void DDR2::scheduleFRFCFS()
 			//rlavaee}
 
       writeServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
-			std::cout << "one write from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
+			//std::cout << "one write from rank"<< mRef->getRankID() <<", bank " << mRef->getBankID() <<" serviced in "<< comp_time - mRef->getServTimeStamp()*multiplier << std::endl;
 	  mRef->servTimeStampSet=false;
 
 	  // rlavaee, push this completion time into wrCompQ
@@ -1428,61 +1427,51 @@ void DDR2::clock()
 
 		//report the stats for interval
 		if(globalClock > Interval*IntervalCounter){
-			//std::cout << "wr: "<< wrThinkTime->getSamples() << std::endl;
-			//std::cout << "rd: " <<rdThinkTime->getSamples() << std::endl;
-			//wrThinkTimeStream << wrThinkTime->getDouble() << std::endl;
-			//wrThinkTimeStream.flush();
 			wrJobCountStream << wrPopulation->getDouble() << std::endl;
 			wrJobCountStream.flush();
 
 			rdJobCountStream << rdPopulation->getDouble() << std::endl;
 			rdJobCountStream.flush();
 
-//apareek{
 			wrServTimeStream << writeServRate->getDouble() << std::endl;
 			wrServTimeStream.flush();
-			//printf("WrServTime: %f\n",writeServRate->getDouble());
 			rdServTimeStream << readServRate->getDouble() << std::endl;
 			rdServTimeStream.flush();
-			//printf("RdServTime: %f\n",writeServRate->getDouble());
-//apareek}
-			wrThinkTime->resetStat();
-			wrPopulation->resetStat();
-			wrCompQ.clear();
-//apareek{
-			writeServRate->resetStat();
-			readServRate->resetStat();
-//apareek}
-//apareek{bank stats dump
 
+	
 			for(int j = 0; j<numRanks;j++){
 				ranks[j]->dumpBankStats();
 			}
-//apareek}
-
+	
 			rdAccessTimeStream << IntervalMemoryRAccessTime->getDouble() << std::endl;
 			rdAccessTimeStream.flush();
 
 			wrAccessTimeStream << IntervalMemoryWAccessTime->getDouble() << std::endl;
 			wrAccessTimeStream.flush();
 
-			rdThinkTimeStream << (32*Interval - IntervalMemoryRAccessTime->getSamples() * IntervalMemoryRAccessTime->getDouble())/IntervalMemoryRAccessTime->getSamples() << std::endl;
-			//rdThinkTimeStream << rdThinkTime->getDouble() << std::endl;
+			rdThinkTimeStream << (rdPopulation->getDouble()*Interval - IntervalMemoryRAccessTime->getSamples() * IntervalMemoryRAccessTime->getDouble())/IntervalMemoryRAccessTime->getSamples() << std::endl;
 			rdThinkTimeStream.flush();
 
-			rdThinkTime->resetStat();
-			rdPopulation->resetStat();
-			rdCompQ.clear();
-
-			wrThinkTimeStream << (32*Interval - IntervalMemoryWAccessTime->getSamples() * IntervalMemoryWAccessTime->getDouble())/IntervalMemoryWAccessTime->getSamples() << std::endl;
+			
+			wrThinkTimeStream << (wrPopulation->getDouble()*Interval - IntervalMemoryWAccessTime->getSamples() * IntervalMemoryWAccessTime->getDouble())/IntervalMemoryWAccessTime->getSamples() << std::endl;
 			wrThinkTimeStream.flush();
-
-			IntervalMemoryRAccessTime -> resetStat();
-			IntervalMemoryWAccessTime -> resetStat();
 
 			//report number of reads/writes
 			rdNumStream << IntervalNReads->getValue() << std::endl;
 			wrNumStream << IntervalNWrites->getValue() << std::endl;
+
+			IntervalMemoryRAccessTime -> resetStat();
+			IntervalMemoryWAccessTime -> resetStat();
+
+			rdPopulation->resetStat();
+			rdCompQ.clear();
+
+			wrPopulation->resetStat();
+			wrCompQ.clear();
+
+			writeServRate->resetStat();
+			readServRate->resetStat();
+
 
 			IntervalNReads->resetStat();
 			IntervalNWrites->resetStat();
