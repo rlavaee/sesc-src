@@ -1049,7 +1049,13 @@ void DDR2::scheduleFCFS()
 
   //If an outstanding reference exists in the queue
   if(mRef != NULL){
-    
+//apareek{
+	if(!mRef->servTimeStampSet) {
+		mRef->setServTimeStamp(DRAMClock);//apareek
+		mRef->servTimeStampSet=true;
+		printf("ServTime: %f : Oldest Time: %f\n",DRAMClock,oldestTime);
+	}
+//apareek}
     //If the reference needs a precharge
     if(mRef->needsPrecharge()){
       //If the precharge can be issued now
@@ -1092,6 +1098,17 @@ void DDR2::scheduleFCFS()
 	read(mRef->getRankID(), mRef->getBankID(), mRef->getRowID());
 	mRef->setReadPending(false);
 	//This reference is now complete
+
+			Time_t comp_time = globalClock + multiplier * (tCL + (BL/2)+1);
+
+			//rlavaee{
+		rdCompQ.push_back(comp_time);
+			//rlavaee}
+	IntervalMemoryRAccessTime->sample(comp_time - mRef->getTimeStamp()*multiplier); //Omid
+			IntervalNReads->inc();
+      readServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
+	  mRef->servTimeStampSet=false;
+
 	mRef->complete(globalClock + multiplier * (tCL + (BL/2) + 1) );
 #ifndef FASTQUEUE_LIST
 	freeList->push_back(index);
@@ -1119,6 +1136,27 @@ void DDR2::scheduleFCFS()
 	write(mRef->getRankID(), mRef->getBankID(), mRef->getRowID());
 	mRef->setWritePending(false);
 	//This reference is now complete
+
+			//rlavaee: better to reuse completion time
+			Time_t comp_time = globalClock+multiplier *(tWL + (BL/2) + 1);
+      memoryWAccesTime->sample(comp_time - mRef->getTimeStamp()*multiplier);
+      
+			// rlavaee{
+			IntervalMemoryWAccessTime->sample(comp_time - mRef->getTimeStamp()*multiplier);
+			IntervalNWrites->inc();
+			//rlavaee}
+
+      writeServRate->sample(comp_time - mRef->getServTimeStamp()*multiplier);//apareek
+	  mRef->servTimeStampSet=false;
+
+	  wrCompQ.push_back(comp_time);
+	  // ~rlavaee
+
+
+
+
+
+
 	mRef->complete(globalClock + multiplier * (tWL + (BL/2) + 1) );
 #ifndef FASTQUEUE_LIST
 	freeList->push_back(index);
@@ -1488,12 +1526,12 @@ void DDR2::clock()
     }
     
     //Schedule next DDR2 command
-    //scheduleFCFS();
+    scheduleFCFS();
 
     // updateIdleDelayFuncControl();
     // scheduleElasticRefresh();
     //scheduleDUERefresh();
-    scheduleFRFCFS();
+    //scheduleFRFCFS();
     
   }
   
