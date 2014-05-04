@@ -1,3 +1,7 @@
+prerequisites:
+	run:
+	gem install PriorityQueue
+
 usage:
 	./ctmc.rb [path/to/input/file] [nchannels] [nranks] [nbanks]
 
