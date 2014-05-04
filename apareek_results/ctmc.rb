@@ -1,3 +1,4 @@
+#!/usr/bin/ruby
 require 'priority_queue'
 require 'fileutils'
 
@@ -336,7 +337,7 @@ module CTMC
 						@@nodes.each_with_index do |state,i|
 							sum_jobs = @@jobTypes.inject(0) {|sum,jt| sum+state.jobsInQs[jt][ch]}
               qocc[job_type] += @@ans[i]*state.jobsInQs[job_type][ch]
-							util[job_type] += @@ans[i]*(state.jobsInQs[job_type][ch].to_f / sum_jobs) if(sum_jobs!=0)
+							util[job_type] += @@ans[i]*(state.jobsInQs[job_type][ch].to_f / sum_jobs)*[sum_jobs.to_f/(@@nranks*@@nbanks),1].min if(sum_jobs!=0)
             	state.out_edges.each do |edge|
               	thru[job_type] += @@ans[i]*edge.rate if(edge.to.jobsInQs[job_type][ch] > edge.from.jobsInQs[job_type][ch])
 							end
@@ -404,7 +405,7 @@ class State
 	@@nchannels=ARGV[1].to_i
 	@@nranks = ARGV[2].to_i
 	@@nbanks = ARGV[3].to_i
-	@@burstLength = 4
+	@@burstLength = 12
 	@@rankToRank = 6
   @@queueSize = (@nchannels==1)?(64):(40)
 	@@nsamples = (@nchannels==1)?(30):(5)
