@@ -3,23 +3,41 @@ require 'priority_queue'
 require 'fileutils'
 
 module CTMC
+		class 
+		SortedArray < Array
+
+			  def initialize(*args, &sort_by)
+					@sort_by = sort_by || Proc.new { |x,y| x <=> y }
+					super(*args)
+					sort! &sort_by
+				end
+
+				def insert(v)
+					# The next line could be further optimized to perform a
+					# binary search.
+					insert_before = index(find { |x| @sort_by.call(x, v) == 1 })
+					super(insert_before ? insert_before : -1, v)
+				end
+		end
 
 	class BusRequest < Range
 		attr_accessor :type
 		attr_accessor :rank
-		def initialize(a,b,type,rank,bank)
+		attr_accessor :has_activate
+		def initialize(a,b,type,rank,bank,has_activate)
 			super(a,b)
 			@type = type
 			@rank = rank
 			@bank = bank
+			@has_activate = has_activate
 		end
 		
 		def to_s
-			return "#{super}[#{@type},#{@rank},#{@bank}]"
+			return "#{super}[#{@type},#{@rank},#{@bank},#{@has_activate}]"
 		end
 
 		def inspect
-			return "#{super}[#{@type},#{@rank},#{@bank}]"
+			return "#{super}[#{@type},#{@rank},#{@bank},#{@has_activate}]"
 		end
 
 	end
@@ -29,6 +47,7 @@ module CTMC
 		attr_accessor :last_rb_comp
     def initialize(nranks,nbanks,servTime)
       @ranges = Array.new
+			@bactivations = SortedArray.new
 			@last_rb_comp = PriorityQueue.new
 			@almost_last_rb_comp_index = Hash.new
 			(0..nranks-1).each do |rank|
@@ -46,33 +65,62 @@ module CTMC
 
 
     def fill_first_empty_slot(length_before,length_after,type,rank,bank)
+			#puts @bactivations.inspect
+			#puts @ranges.inspect
+			has_activate = (Random.rand(66) < @servTime[type]-48)
 			point = @last_rb_comp[[rank,bank]]+@servTime[type]
       from_index = @almost_last_rb_comp_index[[rank,bank]]
 			from = (from_index==-1)?(0):(@ranges[from_index])
-			#puts "from index: #{from_index}"
-
-			(from_index+1..@ranges.size-1).each do |i|
+		
+			i = from_index+1
+			while(i!=@ranges.size) do
 				range = @ranges[i]
-				#puts i
         to = range.first
 
         if( (to-length_before < point+length_after) or ((to < point+length_after) and (range.type=="read" or (type=="write" and range.rank==rank))))
-          from = range.last
+         	from = range.last
  					if((from+length_before > point) and (type=="write" and (range.type=="read" or range.rank!=rank)))
-           	point = from+length_before
+          	point = from+length_before
         	elsif(from > point)
 						point = from
 					end
+					i+=1
+					next
         else
-					@ranges.insert(i,BusRequest.new(point,point+length_after,type,rank,bank))
-					@last_rb_comp[[rank,bank]]=point+length_after
-					@almost_last_rb_comp_index[[rank,bank]]=i
-					return
+					if(has_activate)
+						#puts "#{point-@servTime[type]} .... #{@bactivation}"
+						conflict_activate = @bactivations.bsearch{|x| x > point-@servTime[type]-15 and x <= point-@servTime[type]}
+						if(!conflict_activate.nil?)
+							point = conflict_activate+@servTime[type]+15
+							#puts "blocked"
+							next
+						else
+							@bactivations.insert(point-@servTime[type])
+							@ranges.insert(i,BusRequest.new(point,point+length_after,type,rank,bank,has_activate))
+							@last_rb_comp[[rank,bank]]=point+length_after
+							@almost_last_rb_comp_index[[rank,bank]]=i
+							return
+						end
+					else
+						@ranges.insert(i,BusRequest.new(point,point+length_after,type,rank,bank,has_activate))
+						@last_rb_comp[[rank,bank]]=point+length_after
+						@almost_last_rb_comp_index[[rank,bank]]=i
+						return
+					end
 				end
 
-      end
-			
-      @ranges <<  BusRequest.new(point,point+length_after,type,rank,bank)
+			end
+
+			if(has_activate)
+					#puts "#{point-@servTime[type]} .... #{@bactivations}"
+					conflict_activate = @bactivations.bsearch{|x| x > point-@servTime[type]-15 and x <= point-@servTime[type]}
+					if(!conflict_activate.nil?)
+						point = conflict_activate+@servTime[type]+15
+					end
+					@bactivations.insert(point-@servTime[type])
+			end
+
+      @ranges <<  BusRequest.new(point,point+length_after,type,rank,bank,has_activate)
 			@last_rb_comp[[rank,bank]]=point+length_after
 			@almost_last_rb_comp_index[[rank,bank]]=@ranges.size-1
 			return
@@ -80,7 +128,8 @@ module CTMC
     end
 
 		def to_s
-			@ranges.to_s
+			"ranges: #{@ranges.to_s}\nactivates: #{@bactivations.to_s}"
+
 		end
 
   end
@@ -219,8 +268,8 @@ module CTMC
 
 					end
 						
-					#puts bus.to_s
-					#puts "\n"
+					puts bus.to_s
+					puts "\n"
 					last = bus.last_completion
 					service_rates.each do |job_type,rates|
 						service_rates[job_type] << @jobsInQs[job_type][channel].to_f / last if (last!=0)
